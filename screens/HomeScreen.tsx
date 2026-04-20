@@ -212,7 +212,13 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                     isActive && styles.catCircleActive,
                   ]}>
                     <Image source={{ uri: item.image }} style={styles.catCircleImg} />
-                    {isActive && <View style={styles.catCircleOverlay} />}
+                    {isActive && (
+                      <View style={styles.catCircleOverlay}>
+                        <View style={styles.shopNowBadge}>
+                          <Text style={styles.shopNowText}>SHOP</Text>
+                        </View>
+                      </View>
+                    )}
                   </View>
                   <Text style={[styles.catCircleName, isActive && styles.catCircleNameActive]} numberOfLines={2}>
                     {item.name}
@@ -490,7 +496,21 @@ const styles = StyleSheet.create({
   },
   catCircleOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 107, 1, 0.05)',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shopNowBadge: {
+    backgroundColor: '#FF6B01',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    elevation: 4,
+  },
+  shopNowText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontFamily: 'Jost-Black',
   },
   catCircleName: {
     fontSize: 12,
