@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   },
   catText: {
     fontSize: 15,
-    color: '#999',
+    color: '#666',
     fontFamily: 'Jost-SemiBold',
   },
   activeCatText: {

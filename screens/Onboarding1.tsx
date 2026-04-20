@@ -19,26 +19,30 @@ const Onboarding1: React.FC<Props> = ({ navigation }) => {
       >
         <View style={styles.topSection}>
           <View style={styles.logoContainer}>
-            <Image source={require('../assets/icon.png')} style={styles.miniLogo} />
+            <Image 
+              source={{ uri: 'https://cdn-icons-png.flaticon.com/512/3022/3022513.png' }} 
+              style={styles.miniLogo} 
+            />
             <Text style={styles.logoText}>Simba Mart</Text>
           </View>
 
           <View style={styles.imageWrapper}>
             <View style={styles.orbitCircle}>
-              <View style={[styles.miniCircle, { top: -20, left: '60%' }]}>
-                <Image source={{ uri: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=200' }} style={styles.miniImg} />
+              {/* Floating Sushi */}
+              <View style={[styles.miniCircle, { top: -10, right: 10 }]}>
+                <Image source={{ uri: 'https://images.pexels.com/photos/2098085/pexels-photo-2098085.jpeg?auto=compress&cs=tinysrgb&w=300' }} style={styles.miniImg} />
               </View>
-              <View style={[styles.miniCircle, { bottom: 20, right: -20 }]}>
-                <Image source={{ uri: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200' }} style={styles.miniImg} />
+              {/* Floating Burger */}
+              <View style={[styles.miniCircle, { bottom: 40, right: -15 }]}>
+                <Image source={{ uri: 'https://images.pexels.com/photos/1633525/pexels-photo-1633525.jpeg?auto=compress&cs=tinysrgb&w=300' }} style={styles.miniImg} />
               </View>
-              <View style={[styles.miniCircle, { top: '50%', left: -30 }]}>
-                <Image source={{ uri: 'https://images.unsplash.com/photo-1546767012-149d679659cd?w=200' }} style={styles.miniImg} />
-              </View>
+              {/* Empty Space for the White circle in screenshot */}
+              <View style={[styles.miniCircle, { top: '50%', left: -30, backgroundColor: '#FFFFFF' }]} />
               
               <View style={styles.mainCircleWrapper}>
                 <View style={styles.mainCircle}>
                   <Image 
-                    source={{ uri: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800' }} 
+                    source={{ uri: 'https://images.pexels.com/photos/315755/pexels-photo-315755.jpeg?auto=compress&cs=tinysrgb&w=800' }} 
                     style={styles.mainImg} 
                   />
                 </View>
@@ -106,20 +110,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Jost-Black',
   },
   imageWrapper: {
-    width: width * 0.7,
-    height: width * 0.7,
+    width: width * 0.75,
+    height: width * 0.75,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 20,
-    backgroundColor: 'aliceblue',
-    borderRadius: width * 0.35,
+    borderRadius: width * 0.375,
   },
   orbitCircle: {
     width: '100%',
     height: '100%',
-    borderRadius: width * 0.35,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,107,1,0.08)',
+    borderRadius: width * 0.375,
+    backgroundColor: '#F8FBFF', // Subtle blue tint like screenshot
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',

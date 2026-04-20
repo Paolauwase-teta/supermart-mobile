@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useIsFocused } from '@react-navigation/native';
 import {
-  StyleSheet, View, Text, ScrollView, FlatList, Image,
+  StyleSheet, View, Text, ScrollView, Image,
   TouchableOpacity, TextInput, SafeAreaView, Dimensions,
 } from 'react-native';
+import Carousel, { ICarouselInstance } from 'react-native-reanimated-carousel';
+import { useSharedValue, withRepeat, withTiming, cancelAnimation, Easing, runOnJS } from 'react-native-reanimated';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -14,8 +16,8 @@ import { useCart } from '../context/CartContext';
 
 const { width } = Dimensions.get('window');
 
-const CAT_ITEM_WIDTH = 100;
-const CAT_SPACING = 14;
+const CAT_ITEM_WIDTH = 120;
+const CAT_SPACING = 15;
 
 type HomeScreenNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<HomeStackParamList, 'Home'>,
@@ -32,64 +34,12 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const { cartItems } = useCart();
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  // --- Smooth Continuous & Interactive Carousel Logic ---
+  // --- Smooth Marquee Logic with Reanimated ---
+  const carouselRef = useRef<ICarouselInstance>(null);
   const [activeCat, setActiveCat] = useState(CATEGORIES[0].name);
-  const INFINITE_DATA = [...CATEGORIES, ...CATEGORIES, ...CATEGORIES];
-  const carouselRef = useRef<FlatList>(null);
-  const scrollValue = useRef(0);
   const isInteracting = useRef(false);
-  const totalWidth = (CAT_ITEM_WIDTH + CAT_SPACING) * CATEGORIES.length;
 
-  useEffect(() => {
-    const scroll = () => {
-      if (!isFocused || isInteracting.current) {
-        animationFrame.current = requestAnimationFrame(scroll);
-        return;
-      }
-      
-      scrollValue.current += 1.2; // Smooth crawl speed
-      
-      // Infinite loop back
-      if (scrollValue.current >= totalWidth * 2) {
-        scrollValue.current = totalWidth; 
-      }
-      
-      carouselRef.current?.scrollToOffset({
-        offset: scrollValue.current,
-        animated: false,
-      });
-
-      // Update grid below based on center
-      const centerPos = scrollValue.current + (width / 2);
-      const relativeCenter = centerPos % totalWidth;
-      const centeredIndex = Math.floor(relativeCenter / (CAT_ITEM_WIDTH + CAT_SPACING));
-      const currentName = CATEGORIES[centeredIndex % CATEGORIES.length].name;
-      if (activeCat !== currentName) {
-        setActiveCat(currentName);
-      }
-      
-      animationFrame.current = requestAnimationFrame(scroll);
-    };
-
-    const animationFrame = { current: 0 };
-    animationFrame.current = requestAnimationFrame(scroll);
-    
-    return () => cancelAnimationFrame(animationFrame.current);
-  }, [totalWidth, isFocused, activeCat]);
-
-  const handleManualScroll = (event: any) => {
-    scrollValue.current = event.nativeEvent.contentOffset.x;
-  };
-
-  useEffect(() => {
-    // Start in the middle segment
-    setTimeout(() => {
-      scrollValue.current = totalWidth;
-      carouselRef.current?.scrollToOffset({ offset: totalWidth, animated: false });
-    }, 100);
-  }, [totalWidth]);
-
-  // Filtered Products: Prioritize Prepared Foods (Pizza), then Fruits
+  // Filtered Products for the bottom grid
   const featuredProducts = PRODUCTS.filter(p => (p.rating || 0) >= 4.5)
     .sort((a, b) => {
       const priority = { 'Prepared Foods': 1, 'Fresh Fruits': 2, 'Dairy & Eggs': 3 };
@@ -170,7 +120,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </TouchableOpacity>
 
-        {/* ── SHOP BY CATEGORY (Smooth Crawler) ── */}
+        {/* ── SHOP BY CATEGORY (Infinite Smooth Glide) ── */}
         <View style={styles.sectionBlock}>
           <View style={styles.sectionHeaderRow}>
             <View>
@@ -182,52 +132,48 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          <FlatList
-            ref={carouselRef}
-            horizontal
-            data={INFINITE_DATA}
-            keyExtractor={(item, index) => `${item.id}-${index}`}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.carouselContent}
-            onScroll={handleManualScroll}
-            onTouchStart={() => { isInteracting.current = true; }}
-            onTouchEnd={() => { isInteracting.current = false; }}
-            onScrollBeginDrag={() => { isInteracting.current = true; }}
-            onScrollEndDrag={() => { isInteracting.current = false; }}
-            scrollEventThrottle={16}
-            onScrollToIndexFailed={() => {}}
-            renderItem={({ item }) => {
-              const isActive = activeCat === item.name;
-              return (
-                <TouchableOpacity
-                  style={styles.catCircleItem}
-                  onPress={() => navigation.navigate('ProductList', { category: item.name })}
-                  onPressIn={() => { isInteracting.current = true; }}
-                  onPressOut={() => { isInteracting.current = false; }}
-                  activeOpacity={0.8}
-                >
-                  <View style={[
-                    styles.catCircle,
-                    { backgroundColor: item.bg },
-                    isActive && styles.catCircleActive,
-                  ]}>
-                    <Image source={{ uri: item.image }} style={styles.catCircleImg} />
-                    {isActive && (
-                      <View style={styles.catCircleOverlay}>
-                        <View style={styles.shopNowBadge}>
-                          <Text style={styles.shopNowText}>SHOP</Text>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[styles.catCircleName, isActive && styles.catCircleNameActive]} numberOfLines={2}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.catCircleCount}>{item.count}</Text>
-                </TouchableOpacity>
-              );
-            }}
-          />
+          <View style={styles.carouselWrapper}>
+            <Carousel
+              ref={carouselRef}
+              loop
+              enabled={!isInteracting.current} // Hard stop when interacting
+              autoPlay={!isInteracting.current && isFocused}
+              autoPlayInterval={0}
+              scrollAnimationDuration={6000} // Extra smooth crawling
+              width={CAT_ITEM_WIDTH + CAT_SPACING}
+              height={160}
+              data={CATEGORIES}
+              onSnapToItem={(index) => setActiveCat(CATEGORIES[index].name)}
+              renderItem={({ item }) => {
+                const isActive = activeCat === item.name;
+                return (
+                  <TouchableOpacity
+                    style={styles.catItem}
+                    activeOpacity={0.9}
+                    onPressIn={() => { isInteracting.current = true; }}
+                    onPressOut={() => { isInteracting.current = false; }}
+                    onPress={() => {
+                      isInteracting.current = true;
+                      navigation.navigate('ProductList', { category: item.name });
+                    }}
+                  >
+                    <View style={[
+                      styles.catCircle,
+                      { backgroundColor: item.bg },
+                      isActive && styles.catCircleActive
+                    ]}>
+                      <Image source={{ uri: item.image }} style={styles.catImg} />
+                    </View>
+                    <Text style={[styles.catName, isActive && styles.catNameActive]} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.catCount}>{item.count}</Text>
+                  </TouchableOpacity>
+                );
+              }}
+              style={styles.reanimatedCarousel}
+            />
+          </View>
         </View>
 
         {/* ── FEATURED PRODUCTS (Aesthetic & Full) ── */}
@@ -353,14 +299,15 @@ const styles = StyleSheet.create({
   },
   heyText: {
     fontSize: 16,
-    color: '#999',
+    color: '#666',
     fontFamily: 'Jost-Medium',
   },
   findFoodText: {
-    fontSize: 28,
+    fontSize: 30,
     color: '#1A1A1A',
     fontFamily: 'Jost-Black',
     marginTop: 2,
+    letterSpacing: -0.5,
   },
   searchRow: {
     paddingHorizontal: 20,
@@ -458,76 +405,53 @@ const styles = StyleSheet.create({
     color: '#FF6B01',
     fontFamily: 'Jost-Bold',
   },
-  carouselContent: {
+  carouselWrapper: {
+    alignItems: 'center',
     paddingVertical: 10,
-    paddingBottom: 20,
   },
-  catCircleItem: {
+  reanimatedCarousel: {
+    width: width,
+    justifyContent: 'center',
+  },
+  catItem: {
     width: CAT_ITEM_WIDTH,
     alignItems: 'center',
-    marginHorizontal: CAT_SPACING / 2,
   },
   catCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    position: 'relative',
-    overflow: 'hidden',
+    backgroundColor: '#F8F9FA',
     borderWidth: 2,
     borderColor: 'transparent',
+    overflow: 'hidden',
   },
   catCircleActive: {
     borderColor: '#FF6B01',
-    backgroundColor: '#FFFFFF',
-    elevation: 0,
-    transform: [{ scale: 1.1 }],
+    transform: [{ scale: 1.05 }],
   },
-  catCircleImg: {
+  catImg: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
-  catCircleOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  shopNowBadge: {
-    backgroundColor: '#FF6B01',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    elevation: 4,
-  },
-  shopNowText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontFamily: 'Jost-Black',
-  },
-  catCircleName: {
-    fontSize: 12,
-    color: '#444',
+  catName: {
+    fontSize: 14,
+    color: '#222',
     fontFamily: 'Jost-Bold',
-    textAlign: 'center',
     marginTop: 10,
-    height: 32,
+    textAlign: 'center',
   },
-  catCircleNameActive: {
+  catNameActive: {
     color: '#FF6B01',
-    fontSize: 13,
+    transform: [{ scale: 1.05 }],
   },
-  catCircleCount: {
-    fontSize: 9,
-    color: '#AAA',
-    fontFamily: 'Jost-Medium',
+  catCount: {
+    fontSize: 10,
+    color: '#666',
+    fontFamily: 'Jost-SemiBold',
   },
   grid: {
     flexDirection: 'row',
@@ -593,8 +517,8 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 11,
-    color: '#AAA',
-    fontFamily: 'Jost-Regular',
+    color: '#666',
+    fontFamily: 'Jost-Bold',
   },
   priceRow: {
     flexDirection: 'row',
