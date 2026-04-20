@@ -8,7 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { HomeStackParamList, BottomTabParamList, RootStackParamList } from '../types/navigation';
-import { Bell, Search, Menu as MenuIcon, Plus, Heart, Star, ShoppingCart } from 'lucide-react-native';
+import { Bell, Search, Menu as MenuIcon, Plus, Heart, Star, ShoppingCart, MapPin } from 'lucide-react-native';
 import { PRODUCTS, CATEGORIES } from '../types/mockData';
 import { useCart } from '../context/CartContext';
 
@@ -32,70 +32,72 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const { cartItems } = useCart();
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  // --- Synced Category & Products Grid Logic ---
+  // --- Smooth Continuous & Interactive Carousel Logic ---
   const [activeCat, setActiveCat] = useState(CATEGORIES[0].name);
   const INFINITE_DATA = [...CATEGORIES, ...CATEGORIES, ...CATEGORIES];
   const carouselRef = useRef<FlatList>(null);
-  const currentIndex = useRef(CATEGORIES.length);
+  const scrollValue = useRef(0);
   const isInteracting = useRef(false);
+  const totalWidth = (CAT_ITEM_WIDTH + CAT_SPACING) * CATEGORIES.length;
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    
-    const startAutoScroll = () => {
-      timer = setInterval(() => {
-        if (!isFocused || isInteracting.current) return;
-        
-        currentIndex.current += 1;
-        
-        // Loop back if we're at the end of the 3rd segment
-        if (currentIndex.current >= CATEGORIES.length * 2.5) {
-          currentIndex.current = CATEGORIES.length;
-          carouselRef.current?.scrollToIndex({ index: currentIndex.current, animated: false, viewPosition: 0.5 });
-        } else {
-          carouselRef.current?.scrollToIndex({ index: currentIndex.current, animated: true, viewPosition: 0.5 });
-        }
-        
-        // Update the active category for the grid below
-        const activeItem = INFINITE_DATA[currentIndex.current % CATEGORIES.length];
-        setActiveCat(activeItem.name);
-      }, 2500); // Stop at each category for 2.5 seconds
+    const scroll = () => {
+      if (!isFocused || isInteracting.current) {
+        animationFrame.current = requestAnimationFrame(scroll);
+        return;
+      }
+      
+      scrollValue.current += 1.2; // Smooth crawl speed
+      
+      // Infinite loop back
+      if (scrollValue.current >= totalWidth * 2) {
+        scrollValue.current = totalWidth; 
+      }
+      
+      carouselRef.current?.scrollToOffset({
+        offset: scrollValue.current,
+        animated: false,
+      });
+
+      // Update grid below based on center
+      const centerPos = scrollValue.current + (width / 2);
+      const relativeCenter = centerPos % totalWidth;
+      const centeredIndex = Math.floor(relativeCenter / (CAT_ITEM_WIDTH + CAT_SPACING));
+      const currentName = CATEGORIES[centeredIndex % CATEGORIES.length].name;
+      if (activeCat !== currentName) {
+        setActiveCat(currentName);
+      }
+      
+      animationFrame.current = requestAnimationFrame(scroll);
     };
 
-    startAutoScroll();
-    return () => clearInterval(timer);
-  }, [isFocused]);
-
-  const handleScroll = (event: any) => {
-    const x = event.nativeEvent.contentOffset.x;
-    const itemFullWidth = CAT_ITEM_WIDTH + CAT_SPACING;
-    const centerIndex = Math.round(x / itemFullWidth);
+    const animationFrame = { current: 0 };
+    animationFrame.current = requestAnimationFrame(scroll);
     
-    // Smooth infinite wrap-around
-    const totalContentWidth = itemFullWidth * CATEGORIES.length;
-    if (x >= totalContentWidth * 2) {
-      carouselRef.current?.scrollToOffset({ offset: x - totalContentWidth, animated: false });
-    } else if (x <= totalContentWidth / 2 && x > 0) {
-      carouselRef.current?.scrollToOffset({ offset: x + totalContentWidth, animated: false });
-    }
+    return () => cancelAnimationFrame(animationFrame.current);
+  }, [totalWidth, isFocused, activeCat]);
 
-    // Sync activeCat with what's centered (for manual scroll too)
-    const normalizedIndex = centerIndex % CATEGORIES.length;
-    const currentName = CATEGORIES[normalizedIndex].name;
-    if (activeCat !== currentName) {
-      setActiveCat(currentName);
-    }
+  const handleManualScroll = (event: any) => {
+    scrollValue.current = event.nativeEvent.contentOffset.x;
   };
 
   useEffect(() => {
-    // Initial position in middle segment
+    // Start in the middle segment
     setTimeout(() => {
-      carouselRef.current?.scrollToIndex({ index: CATEGORIES.length, animated: false, viewPosition: 0.5 });
+      scrollValue.current = totalWidth;
+      carouselRef.current?.scrollToOffset({ offset: totalWidth, animated: false });
     }, 100);
-  }, []);
+  }, [totalWidth]);
 
-  // Filtered Products for the Home screen grid based on centered category
-  const filteredProducts = PRODUCTS.filter(p => p.category === activeCat);
+  // Filtered Products: Prioritize Prepared Foods (Pizza), then Fruits
+  const featuredProducts = PRODUCTS.filter(p => (p.rating || 0) >= 4.5)
+    .sort((a, b) => {
+      const priority = { 'Prepared Foods': 1, 'Fresh Fruits': 2, 'Dairy & Eggs': 3 };
+      const aPrio = priority[a.category as keyof typeof priority] || 99;
+      const bPrio = priority[b.category as keyof typeof priority] || 99;
+      return aPrio - bPrio;
+    })
+    .slice(0, 10);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -118,6 +120,9 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
               )}
             </View>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Location')}>
+            <MapPin size={24} color="#1A1A1A" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Notifications')}>
             <Bell size={24} color="#1A1A1A" />
@@ -147,12 +152,30 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
 
-        {/* ── SHOP BY CATEGORY Carousel ── */}
+        {/* Store Location Promotional Banner */}
+        <TouchableOpacity 
+          style={styles.locationBanner}
+          onPress={() => navigation.navigate('Location')}
+          activeOpacity={0.9}
+        >
+          <View style={styles.bannerLeft}>
+            <Text style={styles.bannerSubtitle}>FIND US NEAR YOU</Text>
+            <Text style={styles.bannerTitle}>Simba Store Locations</Text>
+            <View style={styles.visitBtn}>
+              <Text style={styles.visitText}>View Map</Text>
+            </View>
+          </View>
+          <View style={styles.bannerRight}>
+             <MapPin size={40} color="#FF6B01" strokeWidth={2.5} />
+          </View>
+        </TouchableOpacity>
+
+        {/* ── SHOP BY CATEGORY (Smooth Crawler) ── */}
         <View style={styles.sectionBlock}>
           <View style={styles.sectionHeaderRow}>
             <View>
               <Text style={styles.sectionHeading}>Shop By Category</Text>
-              <Text style={styles.sectionSubtitle}>TAP TO EXPLORE FULL MENU</Text>
+              <Text style={styles.sectionSubtitle}>CRAWLING THROUGH FRESHNESS</Text>
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('ProductList', { category: 'All' })}>
               <Text style={styles.viewAllOrange}>VIEW ALL →</Text>
@@ -165,11 +188,10 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             data={INFINITE_DATA}
             keyExtractor={(item, index) => `${item.id}-${index}`}
             showsHorizontalScrollIndicator={false}
-            snapToInterval={CAT_ITEM_WIDTH + CAT_SPACING}
-            snapToAlignment="center"
-            decelerationRate="fast"
             contentContainerStyle={styles.carouselContent}
-            onScroll={handleScroll}
+            onScroll={handleManualScroll}
+            onTouchStart={() => { isInteracting.current = true; }}
+            onTouchEnd={() => { isInteracting.current = false; }}
             onScrollBeginDrag={() => { isInteracting.current = true; }}
             onScrollEndDrag={() => { isInteracting.current = false; }}
             scrollEventThrottle={16}
@@ -180,6 +202,8 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                 <TouchableOpacity
                   style={styles.catCircleItem}
                   onPress={() => navigation.navigate('ProductList', { category: item.name })}
+                  onPressIn={() => { isInteracting.current = true; }}
+                  onPressOut={() => { isInteracting.current = false; }}
                   activeOpacity={0.8}
                 >
                   <View style={[
@@ -200,56 +224,50 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           />
         </View>
 
-        {/* ── FEATURED PRODUCTS (Synced with Carousel) ── */}
+        {/* ── FEATURED PRODUCTS (Aesthetic & Full) ── */}
         <View style={styles.sectionBlock}>
           <View style={styles.sectionHeaderRow}>
             <View>
-              <Text style={styles.sectionHeading}>Featured In {activeCat}</Text>
-              <Text style={styles.sectionSubtitle}>FRESH & HANDPICKED</Text>
+              <Text style={styles.sectionHeading}>Featured Products</Text>
+              <Text style={styles.sectionSubtitle}>TOP PICK FOR YOU</Text>
             </View>
           </View>
 
-          {filteredProducts.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>Updating our fresh inventory...</Text>
-            </View>
-          ) : (
-            <View style={styles.grid}>
-              {filteredProducts.map(product => (
-                <TouchableOpacity
-                  key={product.id}
-                  style={styles.foodCard}
-                  onPress={() => navigation.navigate('ProductDetail', { product })}
-                  activeOpacity={0.85}
-                >
-                  <View style={styles.foodImgWrapper}>
-                    <Image source={{ uri: product.image }} style={styles.foodImg} />
-                    <TouchableOpacity style={styles.heartBtn}>
-                      <Heart size={14} color="#EA4335" fill="#EA4335" />
+          <View style={styles.grid}>
+            {featuredProducts.map(product => (
+              <TouchableOpacity
+                key={product.id}
+                style={styles.foodCard}
+                onPress={() => navigation.navigate('ProductDetail', { product })}
+                activeOpacity={0.85}
+              >
+                <View style={styles.foodImgWrapper}>
+                  <Image source={{ uri: product.image }} style={styles.foodImg} />
+                  <TouchableOpacity style={styles.heartBtn}>
+                    <Heart size={14} color="#EA4335" fill="#EA4335" />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.foodInfo}>
+                  <Text style={styles.foodName} numberOfLines={2}>{product.name}</Text>
+                  <View style={styles.ratingRow}>
+                    <Star size={11} color="#FFD700" fill="#FFD700" />
+                    <Text style={styles.ratingNum}>{product.rating}</Text>
+                    <Text style={styles.timeText}> · {product.deliveryTime}</Text>
+                  </View>
+                  <View style={styles.priceRow}>
+                    <Text style={styles.foodPrice}>${product.price.toFixed(2)}</Text>
+                    <TouchableOpacity
+                      style={styles.addBtn}
+                      onPress={() => navigation.navigate('ProductDetail', { product })}
+                    >
+                      <Plus size={15} color="#FFFFFF" strokeWidth={3} />
                     </TouchableOpacity>
                   </View>
-
-                  <View style={styles.foodInfo}>
-                    <Text style={styles.foodName} numberOfLines={2}>{product.name}</Text>
-                    <View style={styles.ratingRow}>
-                      <Star size={11} color="#FFD700" fill="#FFD700" />
-                      <Text style={styles.ratingNum}>{product.rating}</Text>
-                      <Text style={styles.timeText}> · {product.deliveryTime}</Text>
-                    </View>
-                    <View style={styles.priceRow}>
-                      <Text style={styles.foodPrice}>${product.price.toFixed(2)}</Text>
-                      <TouchableOpacity
-                        style={styles.addBtn}
-                        onPress={() => navigation.navigate('ProductDetail', { product })}
-                      >
-                        <Plus size={15} color="#FFFFFF" strokeWidth={3} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -325,7 +343,7 @@ const styles = StyleSheet.create({
   welcomeSection: {
     paddingHorizontal: 20,
     marginTop: 20,
-    marginBottom: 15,
+    marginBottom: 5,
   },
   heyText: {
     fontSize: 16,
@@ -340,7 +358,8 @@ const styles = StyleSheet.create({
   },
   searchRow: {
     paddingHorizontal: 20,
-    marginBottom: 25,
+    marginTop: 15,
+    marginBottom: 10,
   },
   searchBar: {
     flexDirection: 'row',
@@ -349,6 +368,54 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     paddingHorizontal: 15,
     height: 55,
+  },
+  locationBanner: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    backgroundColor: '#FFF5F0',
+    borderRadius: 24,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#FFE8DB',
+  },
+  bannerLeft: {
+    flex: 1,
+  },
+  bannerSubtitle: {
+    fontSize: 10,
+    color: '#FF6B01',
+    fontFamily: 'Jost-Bold',
+    letterSpacing: 2,
+  },
+  bannerTitle: {
+    fontSize: 20,
+    color: '#1A1A1A',
+    fontFamily: 'Jost-Black',
+    marginTop: 4,
+  },
+  visitBtn: {
+    backgroundColor: '#FF6B01',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginTop: 12,
+  },
+  visitText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontFamily: 'Jost-Bold',
+  },
+  bannerRight: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchInput: {
     flex: 1,
@@ -386,7 +453,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Jost-Bold',
   },
   carouselContent: {
-    paddingHorizontal: width / 2 - (CAT_ITEM_WIDTH / 2) - 10,
     paddingVertical: 10,
     paddingBottom: 20,
   },
@@ -396,9 +462,9 @@ const styles = StyleSheet.create({
     marginHorizontal: CAT_SPACING / 2,
   },
   catCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,
@@ -408,11 +474,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     position: 'relative',
     overflow: 'hidden',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: 'transparent',
   },
   catCircleActive: {
     borderColor: '#FF6B01',
+    backgroundColor: '#FFFFFF',
+    elevation: 0,
     transform: [{ scale: 1.1 }],
   },
   catCircleImg: {
@@ -422,10 +490,10 @@ const styles = StyleSheet.create({
   },
   catCircleOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 107, 1, 0.1)',
+    backgroundColor: 'rgba(255, 107, 1, 0.05)',
   },
   catCircleName: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#444',
     fontFamily: 'Jost-Bold',
     textAlign: 'center',
@@ -434,10 +502,10 @@ const styles = StyleSheet.create({
   },
   catCircleNameActive: {
     color: '#FF6B01',
-    fontSize: 14,
+    fontSize: 13,
   },
   catCircleCount: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#AAA',
     fontFamily: 'Jost-Medium',
   },
@@ -526,15 +594,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  emptyBox: {
-    width: '100%',
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: '#AAA',
-    fontFamily: 'Jost-Medium',
   },
 });
 

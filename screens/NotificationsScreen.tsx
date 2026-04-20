@@ -9,7 +9,7 @@ const NOTIFICATIONS = [
     desc: 'Your order KPA-4521 has been delivered. Enjoy your meal!',
     time: '2 mins ago',
     icon: <ShoppingBag size={20} color="#FFFFFF" />,
-    color: '#2D6A4F',
+    color: '#FF6B01',
     unread: true,
   },
   {
@@ -24,10 +24,10 @@ const NOTIFICATIONS = [
   {
     id: '3',
     title: 'Review your last order',
-    desc: 'How was the Wagyu Burger? Tell us your thoughts.',
+    desc: 'How was the BBQ Chicken Pizza? Tell us your thoughts.',
     time: '5 hours ago',
     icon: <Star size={20} color="#FFFFFF" />,
-    color: '#FFD700',
+    color: '#FFB800',
     unread: false,
   },
 ];

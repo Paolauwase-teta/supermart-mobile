@@ -20,17 +20,17 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     {
       title: 'Global Settings',
       items: [
-        { icon: User, title: 'Personal Info', color: '#2D6A4F' },
-        { icon: MapPin, title: 'Addresses', color: '#2D6A4F' },
-        { icon: ShieldCheck, title: 'Security', color: '#2D6A4F' },
+        { icon: User, title: 'Personal Info', color: '#FF6B01' },
+        { icon: MapPin, title: 'Addresses', color: '#FF6B01' },
+        { icon: ShieldCheck, title: 'Security', color: '#FF6B01' },
       ]
     },
     {
       title: 'Activity',
       items: [
-        { icon: History, title: 'Order History', color: '#2D6A4F' },
-        { icon: CreditCard, title: 'Payment Methods', color: '#2D6A4F' },
-        { icon: Bell, title: 'Notifications', color: '#2D6A4F' },
+        { icon: History, title: 'Order History', color: '#FF6B01' },
+        { icon: CreditCard, title: 'Payment Methods', color: '#FF6B01' },
+        { icon: Bell, title: 'Notifications', color: '#FF6B01' },
       ]
     }
   ];

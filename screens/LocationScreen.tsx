@@ -134,31 +134,36 @@ const LocationScreen: React.FC<Props> = ({ navigation }) => {
         ))}
 
         {/* Contact Info */}
-        <Text style={styles.sectionLabel}>Contact Us</Text>
-        <View style={styles.contactCard}>
-          <TouchableOpacity style={styles.contactRow} onPress={() => callBranch(selectedBranch.phone)}>
-            <View style={styles.contactIcon}>
-              <Phone size={18} color="#FF6B01" />
-            </View>
-            <View style={styles.contactText}>
-              <Text style={styles.contactLabel}>Phone</Text>
-              <Text style={styles.contactValue}>{selectedBranch.phone}</Text>
-            </View>
-            <Text style={styles.actionText}>Call</Text>
-          </TouchableOpacity>
+        <View style={styles.contactSection}>
+          <Text style={styles.sectionLabel}>Contact & Support</Text>
+          <View style={styles.contactCard}>
+            <TouchableOpacity style={styles.contactRow} onPress={() => callBranch(selectedBranch.phone)}>
+              <View style={styles.contactIcon}>
+                <Phone size={18} color="#FF6B01" />
+              </View>
+              <View style={styles.contactText}>
+                <Text style={styles.contactLabel}>Phone Support</Text>
+                <Text style={styles.contactValue}>{selectedBranch.phone}</Text>
+              </View>
+              <View style={styles.actionBadge}>
+                 <Text style={styles.actionBadgeText}>CALL</Text>
+              </View>
+            </TouchableOpacity>
 
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.contactRow} onPress={() => emailBranch(selectedBranch.email)}>
-            <View style={styles.contactIcon}>
-              <Mail size={18} color="#FF6B01" />
-            </View>
-            <View style={styles.contactText}>
-              <Text style={styles.contactLabel}>Email</Text>
-              <Text style={styles.contactValue}>{selectedBranch.email}</Text>
-            </View>
-            <Text style={styles.actionText}>Email</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.contactRow} onPress={() => emailBranch(selectedBranch.email)}>
+              <View style={styles.contactIcon}>
+                <Mail size={18} color="#FF6B01" />
+              </View>
+              <View style={styles.contactText}>
+                <Text style={styles.contactLabel}>Official Email</Text>
+                <Text style={styles.contactValue}>{selectedBranch.email}</Text>
+              </View>
+              <View style={styles.actionBadge}>
+                 <Text style={styles.actionBadgeText}>EMAIL</Text>
+              </View>
+            </TouchableOpacity>
 
           <View style={styles.divider} />
 
@@ -170,6 +175,7 @@ const LocationScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.contactLabel}>Opening Hours</Text>
               <Text style={styles.contactValue}>{selectedBranch.hours}</Text>
             </View>
+          </View>
           </View>
         </View>
 
@@ -251,6 +257,9 @@ const styles = StyleSheet.create({
   directionsBtnText: { color: '#FFF', fontSize: 13, fontFamily: 'Jost-Bold' },
 
   // Branches
+  contactSection: {
+    marginBottom: 10,
+  },
   sectionLabel: {
     fontSize: 16, color: '#1A1A1A', fontFamily: 'Jost-Black',
     marginHorizontal: 20, marginTop: 10, marginBottom: 12,
@@ -292,7 +301,19 @@ const styles = StyleSheet.create({
   contactText: { flex: 1, gap: 2 },
   contactLabel: { fontSize: 11, color: '#999', fontFamily: 'Jost-Medium' },
   contactValue: { fontSize: 13, color: '#1A1A1A', fontFamily: 'Jost-SemiBold' },
-  actionText: { fontSize: 13, color: '#FF6B01', fontFamily: 'Jost-Bold' },
+  actionBadge: {
+    backgroundColor: '#FFF5F0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FFE8DB',
+  },
+  actionBadgeText: { 
+    fontSize: 10, 
+    color: '#FF6B01', 
+    fontFamily: 'Jost-Black' 
+  },
   divider: { height: 1, backgroundColor: '#F5F5F5', marginHorizontal: 16 },
 
   // Pills
